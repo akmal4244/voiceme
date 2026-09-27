@@ -1,0 +1,6 @@
+{
+  "name": "Vocalis Malaysia - Google AI Text to Speech",
+  "description": "Sistem Text to Speech Bahasa Melayu Malaysia menggunakan enjin Google Gemini Audio AI dengan watak suara tempatan dan fungsi muat turun fail WAV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
