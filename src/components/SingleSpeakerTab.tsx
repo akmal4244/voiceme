@@ -16,6 +16,7 @@ import {
 import { VoiceInfo, SavedSpeech } from '../types/tts.ts';
 import { TEXT_PRESETS, STYLE_PRESETS, VOCAL_EFFECTS, ACCENT_PRESETS } from '../data/presets.ts';
 import { VoiceSelector } from './VoiceSelector.tsx';
+import { enhanceText, generateSingle } from '../lib/gemini.ts';
 
 interface SingleSpeakerTabProps {
   voices: VoiceInfo[];
@@ -83,19 +84,9 @@ export const SingleSpeakerTab: React.FC<SingleSpeakerTabProps> = ({
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/tts/enhance-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, action }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal memproses peningkatan teks.');
-      }
-
-      if (data.enhancedText) {
-        setText(data.enhancedText);
+      const enhancedText = await enhanceText(text, action);
+      if (enhancedText) {
+        setText(enhancedText);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal menambah baik teks');
@@ -115,22 +106,13 @@ export const SingleSpeakerTab: React.FC<SingleSpeakerTabProps> = ({
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/tts/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice: selectedVoice,
-          model: selectedModel,
-          style: customStyle,
-          accent: selectedAccent,
-        }),
+      const data = await generateSingle({
+        text,
+        voice: selectedVoice,
+        model: selectedModel,
+        style: customStyle,
+        accent: selectedAccent,
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal menjana suara audio.');
-      }
 
       const newSpeech: SavedSpeech = {
         id: `speech-${Date.now()}`,

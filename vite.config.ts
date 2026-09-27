@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Laman dihos di https://akmal4244.github.io/voiceme/
+    base: '/voiceme/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

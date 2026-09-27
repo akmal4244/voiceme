@@ -9,7 +9,9 @@ import {
   Volume2,
   ChevronDown,
   ChevronUp,
+  KeyRound,
 } from 'lucide-react';
+import { getApiKey, setApiKey } from './lib/gemini.ts';
 import { VoiceInfo, SavedSpeech } from './types/tts.ts';
 import { SingleSpeakerTab } from './components/SingleSpeakerTab.tsx';
 import { DialogueTab } from './components/DialogueTab.tsx';
@@ -62,22 +64,32 @@ const DEFAULT_VOICES: VoiceInfo[] = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'single' | 'dialogue' | 'history'>('single');
-  const [voices, setVoices] = useState<VoiceInfo[]>(DEFAULT_VOICES);
+  const [voices] = useState<VoiceInfo[]>(DEFAULT_VOICES);
+  const [hasKey, setHasKey] = useState<boolean>(() => !!getApiKey());
+  const [showKeyPanel, setShowKeyPanel] = useState<boolean>(() => !getApiKey());
+  const [keyInput, setKeyInput] = useState<string>('');
   const [currentSpeech, setCurrentSpeech] = useState<SavedSpeech | null>(null);
   const [history, setHistory] = useState<SavedSpeech[]>([]);
   const [showTips, setShowTips] = useState(false);
 
-  // Ambil senarai suara dari pelayan
+  // Pantau perubahan kunci API (disimpan dalam localStorage pelayar sahaja)
   useEffect(() => {
-    fetch('/api/tts/voices')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.voices && Array.isArray(data.voices)) {
-          setVoices(data.voices);
-        }
-      })
-      .catch((err) => console.log('Menggunakan suara lalai:', err));
+    const onChange = () => setHasKey(!!getApiKey());
+    window.addEventListener('vocalis-key-changed', onChange);
+    return () => window.removeEventListener('vocalis-key-changed', onChange);
   }, []);
+
+  const handleSaveKey = () => {
+    if (!keyInput.trim()) return;
+    setApiKey(keyInput);
+    setKeyInput('');
+    setShowKeyPanel(false);
+  };
+
+  const handleRemoveKey = () => {
+    setApiKey('');
+    setShowKeyPanel(true);
+  };
 
   // Muat sejarah dari storan tempatan (localStorage)
   useEffect(() => {
@@ -165,17 +177,74 @@ export default function App() {
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-950/50 border border-emerald-500/30 px-3 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Enjin Suara Melayu Aktif</span>
-            </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowKeyPanel(!showKeyPanel)}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
+                hasKey
+                  ? 'text-emerald-300 bg-emerald-950/50 border-emerald-500/30 hover:border-emerald-400'
+                  : 'text-amber-300 bg-amber-950/50 border-amber-500/40 hover:border-amber-400'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{hasKey ? 'Kunci API Aktif' : 'Tetapkan Kunci API'}</span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Ruang Kandungan Utama */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10 space-y-6">
+        {/* Panel Kunci API Gemini */}
+        {showKeyPanel && (
+          <section className="bg-slate-900/80 border border-amber-500/30 rounded-2xl p-5 shadow-xl text-sm space-y-3">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-400" />
+              <span>Kunci API Google Gemini</span>
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Sistem ini berjalan terus dalam pelayar anda. Dapatkan kunci percuma di{' '}
+              <a
+                href="https://aistudio.google.com/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-300 underline"
+              >
+                aistudio.google.com/apikey
+              </a>
+              . Kunci disimpan dalam pelayar ini sahaja dan dihantar terus ke Google, tidak ke pelayan lain.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveKey()}
+                placeholder={hasKey ? 'Kunci sedia ada disimpan — tampal kunci baharu untuk tukar' : 'Tampal kunci API Gemini (AIza...)'}
+                autoComplete="off"
+                className="flex-1 bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              />
+              <button
+                type="button"
+                onClick={handleSaveKey}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold cursor-pointer"
+              >
+                Simpan
+              </button>
+              {hasKey && (
+                <button
+                  type="button"
+                  onClick={handleRemoveKey}
+                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white cursor-pointer"
+                >
+                  Padam Kunci
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Pemain Audio Aktif */}
         {currentSpeech && (
           <section className="animate-in fade-in slide-in-from-top-4 duration-300">

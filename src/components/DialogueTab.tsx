@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { VoiceInfo, SavedSpeech, DialogueTurn } from '../types/tts.ts';
 import { DIALOGUE_PRESETS, VOCAL_EFFECTS } from '../data/presets.ts';
+import { generateDialogue } from '../lib/gemini.ts';
 
 interface DialogueTabProps {
   voices: VoiceInfo[];
@@ -154,24 +155,15 @@ export const DialogueTab: React.FC<DialogueTabProps> = ({
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/tts/dialogue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          turns: turns.map((t) => ({
-            speaker: t.speaker,
-            text: t.text,
-            style: t.style,
-          })),
-          speaker1,
-          speaker2,
-        }),
+      const data = await generateDialogue({
+        turns: turns.map((t) => ({
+          speaker: t.speaker,
+          text: t.text,
+          style: t.style,
+        })),
+        speaker1,
+        speaker2,
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal menjana audio perbualan dialog.');
-      }
 
       const combinedText = turns
         .map((t) => `[${t.speaker}]: ${t.text}`)
